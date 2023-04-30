@@ -1,45 +1,41 @@
 #!/usr/bin/python
-from flask import Flask
+
+from flask import Flask, request, jsonify
 from flask_restplus import Api, Resource, fields
 import joblib
-from m09_model_deployment import predict_proba
+
+
 
 app = Flask(__name__)
 
-api = Api(
-    app, 
-    version='1.0', 
-    title='Predición de Precio de Vehiculos API',
-    description='Predición de Precio de Vehiculos API')
+#Cargamos el Modelo Entrenado
+MODEL = joblib.load('VehiclePricePrediction.pkl')
 
-ns = api.namespace('predict', 
-     description='Phishing Classifier')
+# Selección de características relevantes
+
+MODEL_features= ['Year','Mileage','State','Make','Model']
+
+@app.route('/predict')
+def predict():
+    Year = request.args.get('Year')
+    Mileage = request.args.get('Mileage')
+    State = request.args.get('State')
+    Make = request.args.get('Make')
+    Model = request.args.get('Model')
+
+    # La lista de caracteristicas que se utilizaran
+    # para la predicción
+    features = [['Year','Mileage','State','Make','Model']]
+    
+    # Utilizamos el modelo para la predicción de los datos
+    label_index = MODEL.predict(features)
    
-parser = api.parser()
-
-parser.add_argument(
-    'URL',
-    type=str, 
-    required=True, 
-    help='URL to be analyzed', 
-    location='args')
-
-resource_fields = api.model('Resource', {
-    'result': fields.String,
-})
-
-@ns.route('/')
-class PhishingApi(Resource):
-
-    @api.doc(parser=parser)
-    @api.marshal_with(resource_fields)
-    def get(self):
-        args = parser.parse_args()
-        
-        return {
-         "result": predict_proba(args['URL'])
-        }, 200
+    label = MODEL_features[label_index[0]]
     
-    
+    # Creamos y enviamos la respuesta al cliente
+    return jsonify(status='Completed Prediction', prediccion=label)
+
 if __name__ == '__main__':
+    # Iniciamos el servidor
     app.run(debug=True, use_reloader=False, host='0.0.0.0', port=8888)
+    
