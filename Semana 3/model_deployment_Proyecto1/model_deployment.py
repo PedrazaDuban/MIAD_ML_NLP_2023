@@ -1,47 +1,54 @@
-#!/usr/bin/python
-
 import pandas as pd
 import joblib
 import sys
 import os
+from sklearn.preprocessing import LabelEncoder
 
-def predict_proba(url):
+def predict_proba(year, mileage, state, make, model):
 
-    clf = joblib.load(os.path.dirname(__file__) + '/VehiclePricePrediction.pkl') 
-    
-    
-    url_ = pd.DataFrame([url], columns=['url'])
-  
-    # Create features
-    keywords = ['https', 'login', '.php', '.html', '@', 'sign']
-    for keyword in keywords:
-        url_['keyword_' + keyword] = url_.url.str.contains(keyword).astype(int)
+    ModeloEntrenado = joblib.load(os.path.dirname(__file__) + '/VehiclePricePrediction.pkl') 
 
-    url_['lenght'] = url_.url.str.len() - 2
-    domain = url_.url.str.split('/', expand=True).iloc[:, 2]
-    url_['lenght_domain'] = domain.str.len()
-    url_['isIP'] = (url_.url.str.replace('.', '') * 1).str.isnumeric().astype(int)
-    url_['count_com'] = url_.url.str.count('com')
-
-    
-
-    # Make prediction
-    p1 = clf.predict_proba(url_.drop('url', axis=1))[0,1]
-
+    datos_entrada = pd.DataFrame(
+        {
+            'Year': [year], 
+            'Mileage': [mileage],
+            'State': [state],
+            'Make': [make],
+            'Model': [model]
+        }
+    )
+    print(f'Datos Ingresados desde el API: ')
+    print(f'{datos_entrada}')
+    print(type(datos_entrada))
+    # Create arrary of categorial variables to be encoded
+    categorical_cols = ['State', 'Make', 'Model']
+    le = LabelEncoder()
+    # apply label encoder on categorical feature columns
+    datos_entrada[categorical_cols] = datos_entrada[categorical_cols].apply(lambda col: le.fit_transform(col))
+    print(f'Datos Ingresados Codificados: ')
+    print(f'{datos_entrada}')
+    print(type(datos_entrada))
+   
+    # Hacer predicción
+    p1 = ModeloEntrenado.predict(datos_entrada)
+    #p1="Entro Aquí" 
     return p1
 
 
 if __name__ == "__main__":
     
-    if len(sys.argv) == 1:
-        print('Please add an URL')
+    if len(sys.argv) == 5:
+        print('Please add the characteristics of the vehicle ')
         
     else:
 
-        url = sys.argv[1]
+        year = int(sys.argv[1])
+        mileage = int(sys.argv[2])
+        state = sys.argv[3]
+        make = sys.argv[4]
+        model = sys.argv[5]
 
-        p1 = predict_proba(url)
+        p1 = predict_proba(year, mileage, state, make, model)
         
-        print(url)
-        print('Probability of Phishing: ', p1)
-        
+        print(f'Características del vehículo: {year} {make} {model} con {mileage} millas en el {state}')
+        print('Probability of Pricing: ', p1)
